@@ -1,0 +1,39 @@
+.navbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 30px;
+  background-color: #020617;
+}
+
+.logo {
+  color: white;
+}
+
+.nav-links {
+  list-style: none;
+  display: flex;
+  gap: 20px;
+}
+
+.nav-item {
+  color: #cbd5f5;
+  text-decoration: none;
+  padding-bottom: 4px;
+}
+
+.nav-item:hover {
+  color: #ffffff;
+}
+
+.nav-item.active {
+  color: #38bdf8;
+  border-bottom: 2px solid #38bdf8;
+}
+.nav-item {
+  transition: color 0.2s ease, border-bottom 0.2s ease;
+}
+
+.nav-item:hover {
+  color: #38bdf8;
+}

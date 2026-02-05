@@ -1,0 +1,27 @@
+{
+  "software developer": {
+    "path": "Learn programming basics → Build projects → Apply for jobs",
+    "skills": ["Java", "Python", "JavaScript"],
+    "resources": [
+      {
+        "title": "FreeCodeCamp",
+        "url": "https://www.freecodecamp.org/"
+      },
+      {
+        "title": "GeeksforGeeks",
+        "url": "https://www.geeksforgeeks.org/"
+      }
+    ]
+  },
+
+  "data scientist": {
+    "path": "Learn Python → Statistics → Machine Learning",
+    "skills": ["Python", "SQL", "ML"],
+    "resources": [
+      {
+        "title": "Kaggle",
+        "url": "https://www.kaggle.com/"
+      }
+    ]
+  }
+}
