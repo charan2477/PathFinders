@@ -1,176 +1,191 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useAuth } from "../context/AuthContext";
+import { FaFolderOpen, FaPlus, FaTrash, FaExternalLinkAlt, FaSearch } from "react-icons/fa";
 
 function ResourcesVault() {
-  const [search, setSearch] = useState("");
-  const [sort, setSort] = useState("top");
-  const [showForm, setShowForm] = useState(false);
+  const { token } = useAuth();
+  const [resources, setResources] = useState([]);
+  const [search, setSearch]       = useState("");
+  const [showForm, setShowForm]   = useState(false);
+  const [loading, setLoading]     = useState(true);
+  const [saving, setSaving]       = useState(false);
+  const [roadmap, setRoadmap]     = useState([]);
+  const [form, setForm] = useState({ title: "", description: "", url: "", tags: "" });
 
-  const [resources, setResources] = useState([
-    {
-      title: "Complete React Documentation",
-      description:
-        "Official React documentation with hooks, components, and best practices.",
-      source: "react.dev",
-      tags: ["React", "JavaScript", "Frontend"],
-      likes: 45
-    },
-    {
-      title: "Coursera Machine Learning Course",
-      description:
-        "Andrew Ng’s famous ML course for beginners.",
-      source: "coursera.org",
-      tags: ["Machine Learning", "Beginner"],
-      likes: 20
-    }
-  ]);
-
-  // Add resource state
-  const [newResource, setNewResource] = useState({
-    title: "",
-    description: "",
-    source: "",
-    tags: ""
-  });
-
-  // FILTER
-  let filtered = resources.filter(
-    (r) =>
-      r.title.toLowerCase().includes(search.toLowerCase()) ||
-      r.tags.join(" ").toLowerCase().includes(search.toLowerCase())
-  );
-
-  // SORT
-  if (sort === "top") {
-    filtered = [...filtered].sort((a, b) => b.likes - a.likes);
-  } else if (sort === "az") {
-    filtered = [...filtered].sort((a, b) =>
-      a.title.localeCompare(b.title)
-    );
-  }
-
-  // ADD RESOURCE
-  const handleAddResource = () => {
-    if (!newResource.title || !newResource.description) return;
-
-    setResources([
-      {
-        ...newResource,
-        tags: newResource.tags.split(",").map((t) => t.trim()),
-        likes: 0
-      },
-      ...resources
-    ]);
-
-    setNewResource({ title: "", description: "", source: "", tags: "" });
-    setShowForm(false);
+  const headers = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${token}`
   };
 
+  const fetchResources = async () => {
+    try {
+      const res  = await fetch("http://localhost:5000/api/resources", { headers });
+      const data = await res.json();
+      setResources(Array.isArray(data) ? data : []);
+    } catch { setResources([]); }
+    finally   { setLoading(false); }
+  };
+
+  const fetchRoadmap = async () => {
+    try {
+      const res  = await fetch("http://localhost:5000/api/auth/me", { headers });
+      const data = await res.json();
+      if (res.ok && data.skillRoadmap) setRoadmap(data.skillRoadmap);
+    } catch { setRoadmap([]); }
+  };
+
+  const addResource = async (e) => {
+    e.preventDefault();
+    if (!form.title.trim()) return;
+    setSaving(true);
+    try {
+      const res = await fetch("http://localhost:5000/api/resources", {
+        method: "POST", headers,
+        body: JSON.stringify(form)
+      });
+      if (res.ok) {
+        setForm({ title: "", description: "", url: "", tags: "" });
+        setShowForm(false);
+        fetchResources();
+      }
+    } finally { setSaving(false); }
+  };
+
+  const deleteResource = async (id) => {
+    await fetch(`http://localhost:5000/api/resources/${id}`, { method: "DELETE", headers });
+    fetchResources();
+  };
+
+  useEffect(() => { 
+    fetchResources(); 
+    fetchRoadmap();
+  }, []);
+
+  const filtered = resources.filter(r =>
+    r.title.toLowerCase().includes(search.toLowerCase()) ||
+    r.tags?.join(" ").toLowerCase().includes(search.toLowerCase())
+  );
+
   return (
-    <div className="container">
-      {/* HEADER */}
-      <div className="resource-header">
-        <h1>Resource Vault</h1>
-        <p>Discover, share, and upvote the best learning resources together</p>
+    <div className="page-container">
+      <div className="page-header">
+        <h1><FaFolderOpen className="page-icon" /> Resources Vault</h1>
+        <p>Save and organise your best learning resources — persisted in MongoDB</p>
       </div>
 
-      {/* CONTROLS */}
+      {/* Controls */}
       <div className="resource-controls">
-        <input
-          className="resource-search"
-          placeholder="Search resources..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-        />
-
-        <div className="resource-actions">
-          <select onChange={(e) => setSort(e.target.value)}>
-            <option value="top">Top Rated</option>
-            <option value="az">A–Z</option>
-          </select>
-
-          <button
-            className="add-resource-btn"
-            onClick={() => setShowForm(true)}
-          >
-            + Add Resource
-          </button>
+        <div className="search-box">
+          <FaSearch className="search-icon" />
+          <input
+            placeholder="Search by title or tag..."
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+          />
         </div>
+        <button className="btn-primary" onClick={() => setShowForm(!showForm)}>
+          <FaPlus /> Add Resource
+        </button>
       </div>
 
-      {/* ADD RESOURCE FORM */}
+      {/* Add form */}
       {showForm && (
-        <div className="card">
-          <h3>Add New Resource</h3>
-
-          <input
-            placeholder="Title"
-            value={newResource.title}
-            onChange={(e) =>
-              setNewResource({ ...newResource, title: e.target.value })
-            }
-          />
-
-          <textarea
-            placeholder="Description"
-            value={newResource.description}
-            onChange={(e) =>
-              setNewResource({
-                ...newResource,
-                description: e.target.value
-              })
-            }
-          />
-
-          <input
-            placeholder="Source (e.g. coursera.org)"
-            value={newResource.source}
-            onChange={(e) =>
-              setNewResource({ ...newResource, source: e.target.value })
-            }
-          />
-
-          <input
-            placeholder="Tags (comma separated)"
-            value={newResource.tags}
-            onChange={(e) =>
-              setNewResource({ ...newResource, tags: e.target.value })
-            }
-          />
-
-          <button onClick={handleAddResource}>Add</button>
-          <button
-            style={{ marginLeft: "10px", background: "#475569" }}
-            onClick={() => setShowForm(false)}
-          >
-            Cancel
-          </button>
+        <div className="card slide-in">
+          <h3>📎 Add New Resource</h3>
+          <form onSubmit={addResource}>
+            <div className="form-group">
+              <input
+                placeholder="Title *"
+                value={form.title}
+                onChange={e => setForm({ ...form, title: e.target.value })}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <textarea
+                rows="3"
+                placeholder="Description"
+                value={form.description}
+                onChange={e => setForm({ ...form, description: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <input
+                placeholder="URL (e.g. https://coursera.org)"
+                value={form.url}
+                onChange={e => setForm({ ...form, url: e.target.value })}
+              />
+            </div>
+            <div className="form-group">
+              <input
+                placeholder="Tags (comma separated: React, JavaScript)"
+                value={form.tags}
+                onChange={e => setForm({ ...form, tags: e.target.value })}
+              />
+            </div>
+            <div style={{ display: "flex", gap: "10px" }}>
+              <button type="submit" className="btn-primary" disabled={saving}>
+                {saving ? "Saving..." : "Save Resource"}
+              </button>
+              <button type="button" className="btn-ghost" onClick={() => setShowForm(false)}>
+                Cancel
+              </button>
+            </div>
+          </form>
         </div>
       )}
 
-      {/* RESOURCE LIST */}
-      <div className="resource-list">
-        {filtered.map((res, index) => (
-          <div className="resource-item" key={index}>
-            <div className="resource-content">
-              <h3>{res.title}</h3>
-              <p>{res.description}</p>
+      {/* AI Roadmap Section */}
+      {roadmap.length > 0 && (
+        <div className="card roadmap-section slide-in" style={{ backgroundColor: "#f0f7ff", borderLeft: "5px solid #2563eb" }}>
+          <h3>✨ AI Learning Roadmap</h3>
+          <p className="subtitle">Your step-by-step guide to mastering new skills</p>
+          <div className="roadmap-grid">
+            {roadmap.map((step, i) => (
+              <div key={i} className="roadmap-step">
+                <div className="step-number">{i + 1}</div>
+                <div className="step-content">
+                  <h4>{step.step}</h4>
+                  <p>{step.description}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
-              <div className="resource-tags">
-                {res.tags.map((tag, i) => (
-                  <span key={i} className="tag">
-                    {tag}
-                  </span>
-                ))}
+      {/* Resources list */}
+      {loading ? (
+        <div className="loading-state">Loading resources...</div>
+      ) : filtered.length === 0 ? (
+        <div className="empty-state">
+          <p>📂 {search ? "No resources match your search." : "No resources yet. Add your first one!"}</p>
+        </div>
+      ) : (
+        <div className="resource-grid">
+          {filtered.map(r => (
+            <div className="resource-card" key={r._id}>
+              <div className="resource-card-body">
+                <h4>{r.title}</h4>
+                {r.description && <p>{r.description}</p>}
+                <div className="tag-row">
+                  {r.tags?.map((tag, i) => <span key={i} className="tag">{tag}</span>)}
+                </div>
+              </div>
+              <div className="resource-card-footer">
+                {r.url && (
+                  <a href={r.url} target="_blank" rel="noreferrer" className="btn-link">
+                    <FaExternalLinkAlt /> Visit
+                  </a>
+                )}
+                <button className="btn-small btn-danger" onClick={() => deleteResource(r._id)}>
+                  <FaTrash />
+                </button>
               </div>
             </div>
-
-            <div className="resource-meta">
-              <span className="source-badge">{res.source}</span>
-              <span className="likes">👍 {res.likes}</span>
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
     </div>
   );
 }

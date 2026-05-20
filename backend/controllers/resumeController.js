@@ -1,51 +1,79 @@
-const pdfjsLib = require("pdfjs-dist/legacy/build/pdf.js");
-
 const skillDatabase = {
-  "software developer": ["javascript", "react", "node", "git", "dsa"],
-  "data scientist": ["python", "sql", "statistics", "machine learning"],
-  "web developer": ["html", "css", "javascript", "react"]
-};
-
-const analyzeResumePDF = async (req, res) => {
-  try {
-    const career = req.body.career;
-
-    if (!req.file || !career) {
-      return res.status(400).json({ error: "PDF and career are required" });
-    }
-
-    const loadingTask = pdfjsLib.getDocument({ data: req.file.buffer });
-    const pdf = await loadingTask.promise;
-
-    let extractedText = "";
-
-    for (let i = 1; i <= pdf.numPages; i++) {
-      const page = await pdf.getPage(i);
-      const content = await page.getTextContent();
-      const strings = content.items.map(item => item.str);
-      extractedText += strings.join(" ");
-    }
-
-    const resumeText = extractedText.toLowerCase();
-    const requiredSkills = skillDatabase[career.toLowerCase()] || [];
-
-    const foundSkills = requiredSkills.filter(skill =>
-      resumeText.includes(skill)
-    );
-
-    const missingSkills = requiredSkills.filter(
-      skill => !foundSkills.includes(skill)
-    );
-
-    return res.json({
-      highlight: foundSkills,
-      improve: missingSkills
-    });
-
-  } catch (error) {
-    console.error("PDF JS Error:", error);
-    return res.status(500).json({ error: "Failed to analyze resume PDF" });
+  "software developer": {
+    required: ["javascript", "python", "java", "git", "data structures", "algorithms", "oop"],
+    label: "Software Developer"
+  },
+  "data scientist": {
+    required: ["python", "sql", "statistics", "machine learning", "pandas", "numpy", "tensorflow"],
+    label: "Data Scientist"
+  },
+  "web developer": {
+    required: ["html", "css", "javascript", "react", "node", "responsive", "api"],
+    label: "Web Developer"
+  },
+  "cyber security analyst": {
+    required: ["networking", "linux", "firewall", "penetration testing", "encryption", "python"],
+    label: "Cyber Security Analyst"
+  },
+  "cloud engineer": {
+    required: ["aws", "docker", "kubernetes", "linux", "terraform", "devops", "ci/cd"],
+    label: "Cloud Engineer"
+  },
+  "ui ux designer": {
+    required: ["figma", "adobe xd", "wireframe", "prototype", "user research", "design thinking"],
+    label: "UI/UX Designer"
   }
 };
 
-module.exports = { analyzeResumePDF };
+const analyzeResume = async (req, res) => {
+  try {
+    const { career, resumeText } = req.body;
+
+    if (!resumeText || !career) {
+      return res.status(400).json({ error: "Resume text and career are required" });
+    }
+
+    const careerKey = career.toLowerCase().trim();
+    const careerData = skillDatabase[careerKey];
+
+    if (!careerData) {
+      return res.status(400).json({
+        error: "Unknown career. Choose from: " + Object.keys(skillDatabase).join(", ")
+      });
+    }
+
+    const text = resumeText.toLowerCase();
+    const required = careerData.required;
+
+    const foundSkills = required.filter(skill => text.includes(skill));
+    const missingSkills = required.filter(skill => !foundSkills.includes(skill));
+
+    const score = Math.round((foundSkills.length / required.length) * 100);
+
+    // Track resume activity
+    if (req.user) {
+      const User = require("../models/User");
+      User.findByIdAndUpdate(req.user._id, {
+        $inc: { "activities.resumes": 1 }
+      }).catch(() => {});
+    }
+
+    return res.json({
+      career: careerData.label,
+      score,
+      foundSkills,
+      missingSkills,
+      message:
+        score >= 70
+          ? "Great match! Your resume aligns well with this career."
+          : score >= 40
+          ? "Moderate match. Work on the missing skills to strengthen your profile."
+          : "Low match. Consider upskilling in the areas listed below."
+    });
+  } catch (error) {
+    console.error("Resume error:", error.message);
+    return res.status(500).json({ error: "Failed to analyze resume" });
+  }
+};
+
+module.exports = { analyzeResume };

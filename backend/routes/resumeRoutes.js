@@ -1,11 +1,8 @@
 const express = require("express");
-const multer = require("multer");
 const router = express.Router();
+const { analyzeResume } = require("../controllers/resumeController");
+const protect = require("../middleware/authMiddleware");
 
-const { analyzeResumePDF } = require("../controllers/resumeController");
-
-const upload = multer({ storage: multer.memoryStorage() });
-
-router.post("/resume/analyze-pdf", upload.single("resume"), analyzeResumePDF);
+router.post("/analyze", protect, analyzeResume);
 
 module.exports = router;

@@ -2,6 +2,6 @@ const express = require("express");
 const router = express.Router();
 const { getSkillRoadmap } = require("../controllers/skillController");
 
-router.get("/skills/:career", getSkillRoadmap);
+router.get("/:career", getSkillRoadmap);
 
 module.exports = router;
