@@ -1,4 +1,3 @@
-# AI Integration Plan for PathFinder Project
 
 ## Overview
 Integrate AI capabilities into career recommendation, resume analysis, and skill roadmap features using Gemini and OpenAI APIs.
